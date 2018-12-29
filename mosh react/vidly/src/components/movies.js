@@ -1,26 +1,29 @@
 import { getMovies } from "../services/fakeMovieService";
-import Like from "./like";
 import React, { Component } from "react";
 import Pagination from "./pagination";
 import paginate from "../utils/paginate";
 import GenresList from "./genresList";
 import { getGenres } from "../services/fakeGenreService";
+import MoviesTable from "./moviesTable";
+import _ from "lodash";
 
 class Movies extends Component {
   state = {
     movies: [],
     genres: [],
-    pageSize: 2,
+    pageSize: 9,
     currentPage: 1,
-    selectedGenre: null
+    selectedGenre: null,
+    sortColumn: { path: "title", order: "asc" }
   };
 
   componentDidMount() {
-    this.setState({ movies: getMovies(), genres: getGenres() });
+    const genres = [{ _id: "", name: "All genres" }, ...getGenres()];
+    this.setState({ movies: getMovies(), genres });
   }
 
   handleGenreChange = genre => {
-    this.setState({ selectedGenre: genre });
+    this.setState({ selectedGenre: genre, currentPage: 1 });
   };
 
   handleDeleteMovie = movieToDelete => {
@@ -48,11 +51,38 @@ class Movies extends Component {
     this.setState({ currentPage: page });
   };
 
+  handleSort = sortColumn => {
+    this.setState({ sortColumn });
+  };
+
+  getPagedData = () => {
+    const {
+      pageSize,
+      currentPage,
+      selectedGenre,
+      movies: allMovies,
+      sortColumn
+    } = this.state;
+
+    const filtered =
+      selectedGenre && selectedGenre._id
+        ? allMovies.filter(m => m.genre._id === selectedGenre._id)
+        : allMovies;
+    const sorted = _.orderBy(filtered, [sortColumn.path], [sortColumn.order]);
+    const movies = paginate(sorted, currentPage, pageSize);
+
+    return { totalCount: filtered.length, data: movies };
+  };
+
   render() {
     const { length: count } = this.state.movies;
-    const { pageSize, currentPage, movies: allMovies } = this.state;
+    const {
+      pageSize,
 
-    const movies = paginate(allMovies, currentPage, pageSize);
+      sortColumn
+    } = this.state;
+
+    const { totalCount, data: movies } = this.getPagedData();
     if (count === 0) return <p>There is no movies!</p>;
     return (
       <div className="row">
@@ -65,45 +95,17 @@ class Movies extends Component {
         </div>
         <div className="col">
           <p>Showing {movies.length} movies in the database</p>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Genre</th>
-                <th>Stock</th>
-                <th>Rate</th>
-                <th />
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {movies.map(movie => (
-                <tr key={movie._id}>
-                  <td>{movie.title}</td>
-                  <td>{movie.genre.name}</td>
-                  <td>{movie.numberInStock}</td>
-                  <td>{movie.dailyRentalRate}</td>
-                  <td>
-                    <Like
-                      isLiked={movie.liked}
-                      onClick={() => this.handleLike(movie)}
-                    />
-                  </td>
-                  <td>
-                    <button
-                      className="btn btn-primary"
-                      onClick={() => this.handleDeleteMovie(movie)}
-                    >
-                      delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {Math.ceil(count / pageSize) > 1 ? (
+          <MoviesTable
+            movies={movies}
+            onLike={this.handleLike}
+            onDelete={this.handleDeleteMovie}
+            onSort={this.handleSort}
+            sortColumn={sortColumn}
+          />
+
+          {Math.ceil(totalCount / pageSize) > 1 ? (
             <Pagination
-              itemsCount={count}
+              itemsCount={totalCount}
               pageSize={this.state.pageSize}
               onPageChange={this.handlePageChange}
               currentPage={this.state.currentPage}

@@ -19,6 +19,7 @@ const genresList = props => {
               : "list-group-item"
           }
           onClick={() => onGenreSelect(genre)}
+          style={{ cursor: "pointer" }}
         >
           {genre[textProperty]}
         </li>
