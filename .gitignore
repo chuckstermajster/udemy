@@ -6,6 +6,9 @@
 /mosh react/node_modules
 /mosh react/vidly/node_modules
 /mosh react/router-app/node_modules
+/mosh react/http-app/
+
+
 
 
 
